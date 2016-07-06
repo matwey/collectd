@@ -50,6 +50,13 @@
 #if HAVE_POLL_H
 # include <poll.h>
 #endif
+#if HAVE_SYS_TIMEX_H
+# include <sys/timex.h>
+#endif
+
+#ifndef STA_NANO
+# define STA_NANO 0x2000
+#endif
 
 static const char *config_keys[] =
 {
@@ -910,8 +917,7 @@ static int ntpd_read (void)
 	int i;
 
 	/* On Linux, if the STA_NANO bit is set in ik->status, then ik->offset
-	 * is is nanoseconds, otherwise it's microseconds.
-	 * TODO(octo): STA_NANO is defined in the Linux specific <sys/timex.h> header. */
+	 * is is nanoseconds, otherwise it's microseconds. */
 	double scale_loop  = 1e-6;
 	double scale_error = 1e-6;
 
@@ -934,6 +940,11 @@ static int ntpd_read (void)
 				"(ik = %p; ik_num = %i; ik_size = %i)",
 				(void *) ik, ik_num, ik_size);
 		return (-1);
+	}
+
+	if (ntohs(ik->status) & STA_NANO) {
+		scale_loop  = 1e-9;
+		scale_error = 1e-9;
 	}
 
 	/* kerninfo -> estimated error */
